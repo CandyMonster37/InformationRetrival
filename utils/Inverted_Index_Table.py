@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-from utils.IO_contral import readfiles
+from utils.IO_contral import readfiles, savefile
 from utils.vb_compression import vb_decode, vb_encode, print_vb_code
 import time
-import nltk
 from utils.SBSTree import sbst
 import re
 import jieba
@@ -211,12 +210,25 @@ def tokenize(documents, language='en'):
     return document_words
 
 
-def process(dir_name):
+def process(args):
+    pre_mattched = args.split(' ')  # do re
+    rule = r'(?<=language=)[\w]*'
+    lan = ''
+    for item in pre_mattched:
+        res = re.search(rule, item)
+        if res:
+            lan = res.group()
+            pre_mattched.remove(item)
+            break
+    if not lan:
+        lan = 'en'
+    dir_name = pre_mattched[0]
+
     t = time.time()
     print('Begin loading and build index.')
     objects = StaticObjects()
     objects.documents, objects.doc_lists = readfiles(dir_name)
-    objects.document_words = tokenize(objects.documents, language='en')
+    objects.document_words = tokenize(objects.documents, language=lan)
     objects.indextable = IndexTable(objects.document_words)
 
     for words in objects.document_words.items():
@@ -226,4 +238,9 @@ def process(dir_name):
             objects.indextable.insert_pair_2(words[1][i] + ' ' + words[1][i + 1], words[0])
     # print(objects.indextable.table)
     print('Finished loading and build index. Elasped time: ', time.time() - t, 's')
+
+    if not os.path.exists('./tmpdata'):
+        os.mkdir('./tmpdata')
+    savefile('./tmpdata/IndexTable.pkl', objects)
+
     return objects

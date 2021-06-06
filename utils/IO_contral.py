@@ -25,3 +25,13 @@ def savefile(filename, obj):
     except Exception as e:
         print(e)
         print('error when saving file: ', filename)
+
+
+def loadfile(filename):
+    try:
+        with open(filename, 'rb') as f:
+            tar = pickle.load(f)
+        return tar
+    except Exception as e:
+        print(e)
+        print('error when loading file: ', filename)
