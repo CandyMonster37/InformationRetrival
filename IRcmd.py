@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import cmd
+import re
 import sys
 from utils.Inverted_Index_Table import process
 import operator
@@ -18,12 +19,23 @@ class IRcmder(cmd.Cmd):
         super(IRcmder, self).__init__()
         self.k = 10
 
-    def do_change_k(self, args):
+    def change_k(self, args):
+        k = self.k
+        un_mattched = args.split(' ')
+        hit_arg_rule = r'(?<=hits=)[\w]*'
+        for item in un_mattched:
+            res = re.search(hit_arg_rule, item)
+            if res:
+                un_mattched.remove(item)
+                k_rule = r'(?<=hits=)[\d]*'
+                k = re.search(k_rule, item).group()
+                break
+        args = ' '.join(un_mattched)
         try:
             ori = self.k
-            tar = int(args)
+            tar = int(k)
             self.k = tar
-            print('Successfully change k from {0} to {1}!'.format(ori, tar))
+            return args
         except Exception as e:
             print(e)
 
@@ -43,6 +55,39 @@ class IRcmder(cmd.Cmd):
             self.object.indextable.show_index(args)
         except Exception as e:
             print(e)
+
+    # 构建正则索引
+    def do_create_Permuterm_index(self, args):
+        try:
+            self.object.indextable.create_Permuterm_index()
+        except Exception as e:
+            print(e)
+
+    # 正则查询
+    def do_wildcard_query(self, args):
+        args = self.change_k(args)
+        print('\n')
+        try:
+            if not self.object.indextable.permuterm_index_table:
+                self.object.indextable.create_Permuterm_index()
+            ret = self.object.indextable.find_regex_words(args)
+            print('searched words: ', ret)
+            ret = self.object.indextable.compute_TFIDF(' '.join(ret))
+            print('Total docs:', len(ret))
+            print('Top-%d rankings:' % self.k)
+            for index, i in enumerate(ret):
+                if index > self.k:
+                    break
+                hit_info = 'doc ID: {0} '.format(i[0]).ljust(12, ' ')
+                hit_info += 'TF-IDF value: {0:.5f} '.format(i[1]).ljust(22, ' ')
+                hit_info += 'doc name: {0}'.format(self.object.doc_lists[i[0]])
+                print(hit_info)
+            self.k = 10
+            print('\n')
+        except Exception as e:
+            print(e)
+
+    # lll
 
     def do_exit(self, args):
         try:

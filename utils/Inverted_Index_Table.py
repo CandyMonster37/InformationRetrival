@@ -2,7 +2,6 @@
 import os
 from utils.IO_contral import readfiles, savefile
 from utils.vb_compression import vb_decode, vb_encode, print_vb_code
-import time
 from utils.SBSTree import sbst
 import re
 import jieba
@@ -115,15 +114,19 @@ class IndexTable:
         else:
             return IDlist[0].keys()
 
-    def create_Permuterm_index(self):
-        print('Begin creating Permuterm index.')
-        t = time.time()
-        self.permuterm_index_table = sbst()
-        for item in self.table.keys():
-            word = item + '$'
-            for i in range(len(word)):
-                self.permuterm_index_table.add([word[i:] + word[:i], item])
-        print('Finished creating Permuterm index. Elasped time: ', time.time() - t, 's')
+    def get_docIDs_with_TF(self, word):
+        IDlist = self.table.get(word, 'null')
+        if IDlist == 'null':
+            return []
+        else:
+            return IDlist[0]
+
+    def get_IDF(self, word):
+        IDlist = self.table.get(word, 'null')
+        if IDlist == 'null':
+            return 0
+        else:
+            return IDlist[1]
 
     # 索引压缩(VB编码)
     def index_compression(self):
@@ -181,6 +184,70 @@ class IndexTable:
             if self.table.compress_word[i] == word:
                 print(self.table.compress_doc_id[i])
                 print_vb_code(self.table.compress_doc_id[i])
+        print('\n')
+
+    def create_Permuterm_index(self):
+        print('Begin creating Permuterm index.')
+        self.permuterm_index_table = sbst()
+        for item in self.table.keys():
+            word = item + '$'
+            for i in range(len(word)):
+                self.permuterm_index_table.add([word[i:] + word[:i], item])
+        print('Finished creating Permuterm index. \n')
+
+    def find_regex_words(self, _prefix):
+        print('Begin wildcard query.')
+
+        prefix = _prefix + '$'
+        prefix = prefix[prefix.rindex('*') + 1:] + prefix[:prefix.index('*')]
+        candidates = []
+        for i in self.permuterm_index_table.forward_from(prefix):
+            if not i[0].startswith(prefix):
+                break
+            candidates.append(i)
+        prefix = _prefix.split('*')
+        candidates_filterd = []
+        for _candidate in candidates:
+            seed = False
+            candidate = _candidate[1]
+            for pre in prefix:
+                try:
+                    candidate = candidate[candidate.index(pre) + len(pre):]
+                except:
+                    seed = True
+                    break
+            if not seed:
+                candidates_filterd.append(_candidate[1])
+
+        print('Finished wildcard query.\n')
+        return candidates_filterd
+
+    def compute_TFIDF(self, sentence_, language='en'):
+        sentence = []
+        if language == 'en':
+            words = sentence_.split(' ')
+            for item in words:
+                if item:
+                    sentence.append(item)
+        elif language == 'zh':
+            pass
+        else:
+            print("no support language")
+            raise
+        scores = {}
+        sentence = Counter(sentence)
+        for piece in sentence.items():
+            doc_list = self.table[piece[0]]
+            weight = (1 + math.log10(piece[1])) * math.log10(self.length / doc_list[1])
+            for doc in doc_list[0].items():
+                if scores.get(doc[0], 'null') != 'null':
+                    scores[doc[0]] += (1 + math.log10(doc[1])) * math.log10(self.length / doc_list[1]) * weight
+                else:
+                    scores[doc[0]] = (1 + math.log10(doc[1])) * math.log10(self.length / doc_list[1]) * weight
+        for i in scores.items():
+            scores[i[0]] = scores[i[0]] / len(self.document_words[i[0]])
+        scores = sorted(scores.items(), key=operator.itemgetter(1), reverse=True)
+        return scores
 
 
 def tokenize(documents, language='en'):
@@ -196,6 +263,7 @@ def tokenize(documents, language='en'):
                     # 只保留单词
                     doc.append(word)
             document_words[_doc[0]] = doc
+        return document_words
     elif language == 'zh':
         for _doc in documents.items():
             doc = []
@@ -207,7 +275,11 @@ def tokenize(documents, language='en'):
                 elif item:
                     doc.append(item)
             document_words[_doc[0]] = doc
-    return document_words
+        return document_words
+    else:
+        print("no support language")
+        raise
+
 
 
 def process(args):
@@ -224,7 +296,6 @@ def process(args):
         lan = 'en'
     dir_name = pre_mattched[0]
 
-    t = time.time()
     print('Begin loading and build index.')
     objects = StaticObjects()
     objects.documents, objects.doc_lists = readfiles(dir_name)
@@ -237,10 +308,6 @@ def process(args):
         for i in range(len(words[1]) - 1):
             objects.indextable.insert_pair_2(words[1][i] + ' ' + words[1][i + 1], words[0])
     # print(objects.indextable.table)
-    print('Finished loading and build index. Elasped time: ', time.time() - t, 's')
-
-    if not os.path.exists('./tmpdata'):
-        os.mkdir('./tmpdata')
-    savefile('./tmpdata/IndexTable.pkl', objects)
+    print('Finished loading and build index.\n')
 
     return objects

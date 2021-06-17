@@ -66,7 +66,7 @@ class sbst:
             self.root = self._insert_into_node(self.root, val, None)
 
     def _skew(self, node):
-        if node == None or node.left == None:
+        if node == None or node.left is None:
             return node
         elif node.left.level == node.level:
             L = node.left
@@ -84,7 +84,7 @@ class sbst:
             return node
 
     def _split(self, node):
-        if node == None or node.right == None or node.right.right == None:
+        if node == None or node.right is None or node.right.right is None:
             return node
         elif node.level == node.right.right.level:
             R = node.right
@@ -120,13 +120,13 @@ class sbst:
             node = self._split(node)
             return node
 
-    def forward_from(self, start=None, inclusive=True, \
+    def forward_from(self, start=None, inclusive=True,
                      stop=None, stop_incl=False):
         node = self.root
         curr = None
         # cumbersome traversal because tree can be rebalanced during iteration
         while node:
-            cmp = -1 if start == None else self.comp_f([start], node.getval())
+            cmp = -1 if start is None else self.comp_f([start], node.getval())
             if cmp == 0:
                 if inclusive:
                     curr = node
