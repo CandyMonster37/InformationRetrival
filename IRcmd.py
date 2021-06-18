@@ -3,6 +3,8 @@ import cmd
 import re
 import sys
 from utils.Inverted_Index_Table import process
+from utils.IO_contral import show_summary
+import time
 import operator
 
 
@@ -68,13 +70,16 @@ class IRcmder(cmd.Cmd):
         args = self.change_k(args)
         print('\n')
         try:
+            t1 = time.time()
             if not self.object.indextable.permuterm_index_table:
                 self.object.indextable.create_Permuterm_index()
             ret = self.object.indextable.find_regex_words(args)
+            words = ret
             print('searched words: ', ret)
             ret = self.object.indextable.compute_TFIDF(' '.join(ret))
-            print('Total docs:', len(ret))
-            print('Top-%d rankings:' % self.k)
+            t2 = time.time()
+            print('Total docs: {0} (took {1:.2f} seconds)'.format(len(ret), t2 - t1))
+            print('Top-%d rankings:\n' % self.k)
             for index, i in enumerate(ret):
                 if index > self.k:
                     break
@@ -82,8 +87,9 @@ class IRcmder(cmd.Cmd):
                 hit_info += 'TF-IDF value: {0:.5f} '.format(i[1]).ljust(22, ' ')
                 hit_info += 'doc name: {0}'.format(self.object.doc_lists[i[0]])
                 print(hit_info)
+                for word in words:
+                    show_summary(doc_list=self.object.doc_lists, index=i[0], word=word)
             self.k = 10
-            print('\n')
         except Exception as e:
             print(e)
 

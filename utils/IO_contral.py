@@ -1,5 +1,5 @@
 import os
-import pickle
+import re
 
 
 def readfiles(dir_name):
@@ -10,28 +10,29 @@ def readfiles(dir_name):
             tar = os.path.join(dir_name, file_name)
             with open(tar, 'r', encoding='utf8') as f:
                 text = f.read()
-                doc_lists.append(file_name)
-                documents[doc_lists.index(file_name)] = text
+                doc_lists.append(tar)
+                documents[doc_lists.index(tar)] = text
         except Exception as e:
             print(e)
             print(file_name)
     return documents, doc_lists
 
 
-def savefile(filename, obj):
-    try:
-        with open(filename, 'wb') as f:
-            pickle.dump(obj, f)
-    except Exception as e:
-        print(e)
-        print('error when saving file: ', filename)
+def show_summary(doc_list, index, word):
+    filename = doc_list[index]
+    intro = 'Some summary information about document \'{}\' is shown as follows:'.format(filename)
+    print(intro)
+    with open(filename, 'r', encoding='utf8') as f:
+        text = f.read()
+    sentences = text.split('.')
+    rule = word[0]
+    for sentence in sentences:
+        if sentence:
+            res = re.search(rule, sentence)
+            if res:
+                print(sentence + '...')
+    print('\n')
 
 
-def loadfile(filename):
-    try:
-        with open(filename, 'rb') as f:
-            tar = pickle.load(f)
-        return tar
-    except Exception as e:
-        print(e)
-        print('error when loading file: ', filename)
+if __name__ == '__main__':
+    pass

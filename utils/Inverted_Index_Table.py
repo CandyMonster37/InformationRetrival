@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from utils.IO_contral import readfiles, savefile
+from utils.IO_contral import readfiles, show_summary
 from utils.vb_compression import vb_decode, vb_encode, print_vb_code
 from utils.SBSTree import sbst
 import re
@@ -186,6 +186,7 @@ class IndexTable:
                 print_vb_code(self.table.compress_doc_id[i])
         print('\n')
 
+    # 创建倒排表
     def create_Permuterm_index(self):
         print('Begin creating Permuterm index.')
         self.permuterm_index_table = sbst()
@@ -195,6 +196,7 @@ class IndexTable:
                 self.permuterm_index_table.add([word[i:] + word[:i], item])
         print('Finished creating Permuterm index. \n')
 
+    # 查找正则词
     def find_regex_words(self, _prefix):
         print('Begin wildcard query.')
 
@@ -222,6 +224,7 @@ class IndexTable:
         print('Finished wildcard query.\n')
         return candidates_filterd
 
+    # 计算TF-IDF，暂不支持中文
     def compute_TFIDF(self, sentence_, language='en'):
         sentence = []
         if language == 'en':
