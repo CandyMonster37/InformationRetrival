@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def vb_encode(doc_ids):
     byte_stream = []
     for num in doc_ids:

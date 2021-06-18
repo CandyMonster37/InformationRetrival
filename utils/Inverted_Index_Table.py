@@ -3,11 +3,13 @@ import os
 from utils.IO_contral import readfiles, show_summary
 from utils.vb_compression import vb_decode, vb_encode, print_vb_code
 from utils.SBSTree import sbst
+from utils.boolean import vector_encode, vector_decode, boolean_op
 import re
 import jieba
 import math
 from collections import Counter
 import operator
+import numpy as np
 
 # import numpy as np
 
@@ -198,8 +200,6 @@ class IndexTable:
 
     # 查找正则词
     def find_regex_words(self, _prefix):
-        print('Begin wildcard query.')
-
         prefix = _prefix + '$'
         prefix = prefix[prefix.rindex('*') + 1:] + prefix[:prefix.index('*')]
         candidates = []
@@ -221,7 +221,6 @@ class IndexTable:
             if not seed:
                 candidates_filterd.append(_candidate[1])
 
-        print('Finished wildcard query.\n')
         return candidates_filterd
 
     # 计算TF-IDF，暂不支持中文
@@ -251,6 +250,105 @@ class IndexTable:
             scores[i[0]] = scores[i[0]] / len(self.document_words[i[0]])
         scores = sorted(scores.items(), key=operator.itemgetter(1), reverse=True)
         return scores
+
+    # 布尔查询 暂不支持中文
+    def boolean_query(self, words, doc_list):
+        priority = {'AND': 1, 'OR': 1, 'NOT': 2, '(': 0}
+        stack = []  # 只存单词不存操作
+        op = []  # 只存操作不存单词
+        ret = []
+        for i in range(0, len(words)):
+            if words[i] == 'AND' or words[i] == 'OR' or words[i] == 'NOT':
+                while (len(op) > 0) and priority[op[len(op) - 1]] >= priority[words[i]]:
+                    stack = boolean_op(op.pop(), stack)
+                op.append(words[i])
+            elif words[i] == '(':
+                op.append('(')
+            elif words[i] == ')':
+                while len(op) > 0 and op[len(op) - 1] != '(':
+                    stack = boolean_op(op.pop(), stack)
+                op.pop()
+            else:
+                # 列表的最后一项一定是空串''，标识结束
+                vec = vector_encode(self.table.get(words[i], [{}, 0])[0], doc_list)
+                stack.append(vec)
+
+        while len(op) > 0:
+            stack = boolean_op(op.pop(), stack)
+        if len(stack) > 1:
+            return 'Invalid boolean expression.'
+        res = stack[0]
+        ret = vector_decode(res, doc_list)
+        return ret
+
+    # 词推荐
+    def correction(self, word):
+        print('correcting...')
+        candidates = []
+        for key in self.table.keys():
+            if abs(len(word) - len(key)) < 3 and Levenshtein_Distance(word, key) < 3:
+                candidates.append(key)
+        if len(candidates):
+            print('\nYou may want to search:')
+            print(' '.join(candidates) + '\n\n')
+
+    #  短语查询 暂不支持中文
+    def phrase_query(self, args, language='en'):
+        sentence = []
+        if language == 'en':
+            words = args.split(' ')
+            for item in words:
+                if item:
+                    sentence.append(item)
+        elif language == 'zh':
+            pass
+        else:
+            print("no support language")
+            raise
+        docs = []
+        for i in range(len(sentence)-1):
+            ret = self.table_2.get(sentence[i] + ' ' + sentence[i + 1], 'none')
+            if ret == 'none':
+                return []
+            docs.append(set(ret[0].keys()))
+        docs = set.intersection(*docs)
+        docs_filterd = []
+        for doc in docs:
+            for i in range(len(self.document_words[doc])):
+                seed = False
+                if i == sentence[0]:
+                    for index, token in enumerate(sentence):
+                        if token != self.document_words[doc][i + index]:
+                            seed = True
+                            break
+                if seed == False:
+                    docs_filterd.append(doc)
+
+        return docs_filterd
+
+    # 只计算指定文档的TF-IDF，暂不支持中文
+    def compute_TFIDF_with_docID(self, sentence_, docID, language='en'):
+        sentence = []
+        if language == 'en':
+            words = sentence_.split(' ')
+            for item in words:
+                if item:
+                    sentence.append(item)
+        elif language == 'zh':
+            pass
+        else:
+            print("no support language")
+            raise
+        score = 0
+        sentence = Counter(sentence)
+        for piece in sentence.items():
+            doc_list = self.table[piece[0]]
+            weight = (1 + math.log10(piece[1])) * math.log10(self.length / doc_list[1])
+            ret = doc_list[0].get(docID, 'none')
+            if ret != 'none':
+                score += (1 + math.log10(ret)) * math.log10(self.length / doc_list[1]) * weight
+            score = score / len(self.document_words[docID])
+        return score
 
 
 def tokenize(documents, language='en'):
@@ -284,7 +382,6 @@ def tokenize(documents, language='en'):
         raise
 
 
-
 def process(args):
     pre_mattched = args.split(' ')  # do re
     rule = r'(?<=language=)[\w]*'
@@ -314,3 +411,27 @@ def process(args):
     print('Finished loading and build index.\n')
 
     return objects
+
+
+# 编辑距离
+def Levenshtein_Distance(str1, str2):
+    m = len(str1)
+    n = len(str2)
+    M = np.zeros((m + 1, n + 1))
+    flag = 0
+    for i in range(m + 1):
+        M[i][0] = i
+    for j in range(n + 1):
+        M[0][j] = j
+    for i in range(1, m + 1):
+        flag = 1
+        for j in range(1, n + 1):
+            if str1[i - 1] == str2[j - 1]:
+                M[i][j] = min(M[i - 1][j] + 1, M[i][j - 1] + 1, M[i - 1][j - 1])
+            else:
+                M[i][j] = min(M[i - 1][j] + 1, M[i][j - 1] + 1, M[i - 1][j - 1] + 1)
+            if M[i][j] < 3:
+                flag = 0
+        if flag == 1:
+            return 10
+    return int(M[m][n])

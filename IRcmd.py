@@ -9,7 +9,7 @@ import operator
 
 
 class IRcmder(cmd.Cmd):
-    intro = "Welcome to the Information Retrival System.".center(100, ' ') + \
+    intro = "Welcome to the Information Retrival System.\n".center(100, ' ') + \
             "\n\nThis is a simple Information Retrival System.\n" + \
             "You can use some commands to do some work related to the information retrieval.\n" + \
             "Shell commands are defined internally.  \n\n" + \
@@ -34,7 +34,6 @@ class IRcmder(cmd.Cmd):
                 break
         args = ' '.join(un_mattched)
         try:
-            ori = self.k
             tar = int(k)
             self.k = tar
             return args
@@ -65,9 +64,10 @@ class IRcmder(cmd.Cmd):
         except Exception as e:
             print(e)
 
-    # 正则查询
+    # 通配符查询
     def do_wildcard_query(self, args):
         args = self.change_k(args)
+        print('\nWildcard query.')
         print('\n')
         try:
             t1 = time.time()
@@ -78,18 +78,105 @@ class IRcmder(cmd.Cmd):
             print('searched words: ', ret)
             ret = self.object.indextable.compute_TFIDF(' '.join(ret))
             t2 = time.time()
-            print('Total docs: {0} (took {1:.2f} seconds)'.format(len(ret), t2 - t1))
-            print('Top-%d rankings:\n' % self.k)
+            print('Total docs: {0} (in {1:.5f} seconds)'.format(len(ret), t2 - t1))
+            print('Top-{0} rankings:\n'.format(min(self.k, len(ret))))
+            printed = {}
+            for word in words:
+                printed[word] = []
+            cnt = 0
             for index, i in enumerate(ret):
-                if index > self.k:
+                if cnt >= self.k:
                     break
                 hit_info = 'doc ID: {0} '.format(i[0]).ljust(12, ' ')
                 hit_info += 'TF-IDF value: {0:.5f} '.format(i[1]).ljust(22, ' ')
                 hit_info += 'doc name: {0}'.format(self.object.doc_lists[i[0]])
                 print(hit_info)
                 for word in words:
-                    show_summary(doc_list=self.object.doc_lists, index=i[0], word=word)
+                    if i[0] not in printed[word]:
+                        if cnt >= self.k:
+                            break
+                        flag = show_summary(doc_list=self.object.doc_lists, index=i[0], word=word)
+                        if flag:
+                            # 打印过的词对应的文章不再打印
+                            print('\n')
+                            printed[word].append(i[0])
+                            cnt += 1
             self.k = 10
+        except Exception as e:
+            print(e)
+
+    # 直接查指定词，通过TF-IDF
+    # def do_search_by_TFIDF(self, args):
+    #     args = self.change_k(args)
+    #     try:
+    #         ret = self.object.indextable.compute_TFIDF(args)
+    #         print('Top-%d rankings:' % self.k)
+    #         for index, i in enumerate(ret):
+    #             if index > self.k:
+    #                 break
+    #             print(i)
+    #         # build Reuters
+    #         # search_by_TFIDF approximately
+    #     except Exception as e:
+    #         print(e)
+
+    # 布尔查询，暂不支持显示文章摘要
+    def do_boolean_query(self, args):
+        args = self.change_k(args)
+        print('\nBoolean query.Does not support summary display temporarily.')
+        print('\n')
+        try:
+            t1 = time.time()
+            expression = args.replace('(', ' ( ').replace(')', ' ) ').split()
+            doc_list = sorted(self.object.documents.keys())
+            ret = self.object.indextable.boolean_query(expression, doc_list)
+            t2 = time.time()
+            if len(ret) == 0:
+                print('Not found. (in {0:.5f} seconds)'.format(t2 - t1))
+                if len(expression) == 1:
+                    self.object.indextable.correction(expression[0])
+            else:
+                if ret != 'Invalid boolean expression.':
+                    print('Total docs: {0} (in {1:.5f} seconds)'.format(len(ret), t2 - t1))
+                    print('Top-{0} rankings:\n'.format(min(self.k, len(ret))))
+                cnt = 0
+                for ID in ret:
+                    if cnt >= self.k:
+                        break
+                    result = 'doc ID: {0} '.format(ID).ljust(12, ' ')
+                    result += 'doc name: {0}'.format(self.object.doc_lists[ID])
+                    print(result)
+                    cnt += 1
+                print('\n')
+        except Exception as e:
+            print(e)
+
+    # 短语查询
+    def do_phrase_query(self, args):
+        args = self.change_k(args)
+        print('\nPhrase query.Does not support summary display temporarily.')
+        print('\n')
+        try:
+            t1 = time.time()
+            ret = self.object.indextable.phrase_query(args)
+            scores = {}
+            for i in ret:
+                scores[i] = self.object.indextable.compute_TFIDF_with_docID(args, i)
+            scores = sorted(scores.items(), key=operator.itemgetter(1), reverse=True)
+            t2 = time.time()
+            print('Total docs: {0} (in {1:.5f} seconds)'.format(len(scores), t2 - t1))
+            print('Top-{0} rankings:\n'.format(min(self.k, len(scores))))
+            for index, i in enumerate(scores):
+                if index > self.k:
+                    break
+                hit_info = 'doc ID: {0} '.format(i[0]).ljust(12, ' ')
+                hit_info += 'TF-IDF value: {0:.5f} '.format(i[1]).ljust(22, ' ')
+                hit_info += 'doc name: {0}'.format(self.object.doc_lists[i[0]])
+                print(hit_info)
+                flag = show_summary(doc_list=self.object.doc_lists, index=i[0], word=args)
+                if flag:
+                    print('\n')
+                # print(i)
         except Exception as e:
             print(e)
 
