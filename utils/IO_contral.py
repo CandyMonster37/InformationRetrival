@@ -43,9 +43,9 @@ def show_summary(doc_list, index, word, phase=False):
                     flag1 = False
                 if sentences.index(sentence) == 0:
                     # 是文章第一句则开头不加...
-                    print(sentence + '...')
+                    print(sentence + '\n...')
                 else:
-                    print('...' + sentence + '...')
+                    print('...\n' + sentence + '\n...')
     return flag2
 
 
