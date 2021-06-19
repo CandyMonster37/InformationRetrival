@@ -4,22 +4,66 @@ import re
 import sys
 from utils.Inverted_Index_Table import process
 from utils.IO_contral import show_summary
+from utils.crawl import Spider
 import time
 import operator
+import os
 
 
 class IRcmder(cmd.Cmd):
-    intro = "Welcome to the Information Retrival System.\n".center(100, ' ') + \
-            "\n\nThis is a simple Information Retrival System.\n" + \
-            "You can use some commands to do some work related to the information retrieval.\n" + \
-            "Shell commands are defined internally.  \n\n" + \
-            "Type \'help\' or \'?\' to list all available commands.\n" + \
-            "Type \'help cmd\' to see more details about the command \'cmd\'.\n" + \
-            "Or type \'exit\' to exit this system.\n\n"
+    intro = "Welcome to the Information Retrival System.\n".center(100, ' ')
+    intro += "\n\nThis is a simple Information Retrival System.\n"
+    intro += "You can use some commands to do some work related to the information retrieval.\n"
+    intro += "Only supports English.\n"
+    intro += "Shell commands are defined internally.  \n\n"
+    intro += "Type \'help\' or \'?\' to list all available commands.\n"
+    intro += "Type \'help cmd\' to see more details about the command \'cmd\'.\n"
+    intro += "Or type \'exit\' to exit this system.\n\n"
 
     def __init__(self):
         super(IRcmder, self).__init__()
         self.k = 10
+
+    # 爬虫获取数据
+    def do_get_data(self, args):
+        # get_data ./data --numbers=10 --wait=0.5
+        k = 10
+        un_mattched = args.split(' ')
+        hit_arg_rule = r'(?<=numbers=)[\w]*'
+        for item in un_mattched:
+            res = re.search(hit_arg_rule, item)
+            if res:
+                un_mattched.remove(item)
+                k_rule = r'(?<=numbers=)[\d]*'
+                k = re.search(k_rule, item).group()
+                break
+        args = ' '.join(un_mattched)
+        try:
+            tar_k = int(k)
+            k = tar_k
+        except Exception as e:
+            print(e)
+        tar_seconds = None
+        un_mattched = args.split(' ')
+        wait_arg_rule = r'(?<=wait=)[\w]*'
+        for item in un_mattched:
+            res = re.search(wait_arg_rule, item)
+            if res:
+                un_mattched.remove(item)
+                wait_rule = r'(?<=wait=)[\d]*'
+                seconds = re.search(wait_rule, item).group()
+                try:
+                    tar_seconds = int(seconds)
+                except Exception as e:
+                    print(e)
+                break
+        args = ' '.join(un_mattched)
+        dirr = args.strip(' ')
+        if not os.path.exists(dirr):
+            os.mkdir(dirr)
+        bug = Spider(limit=k, save_dir=dirr)
+        bug.get_novels(wait=tar_seconds)
+        bug.get_chapter(wait=tar_seconds)
 
     def change_k(self, args):
         k = self.k
@@ -220,6 +264,57 @@ class IRcmder(cmd.Cmd):
         cmd_info = cmd_info + 'For example, if you want to see the VB compression code of the word \'we\','
         cmd_info = cmd_info + ' please type: \n\nshow_index we\n\n'
         cmd_info = cmd_info + 'Later the screen will show the VB compression code of \'we\'\n'
+        print(cmd_info)
+
+    def help_get_data(self):
+        cmd_info = 'command: \tget_data'.center(80, ' ')
+        cmd_info = cmd_info + '\nget_data [dir] --wait --numbers'.center(30, " ") + '\n\n'
+        cmd_info = cmd_info + 'If you don\'t have any English text, '
+        cmd_info = cmd_info + 'then you may need to get some English text for the next work.'
+        cmd_info = cmd_info + '\nYou can use your own data source, ' \
+                              'or use this command to get some data automatically.\n\n'
+        cmd_info = cmd_info + 'For example, if you want to get some data automatically,'
+        cmd_info = cmd_info + ' please type: \n\nget_data ./data --numbers=10 --wait=0.5\n\n'
+        cmd_info = cmd_info + 'Later you will get some English novels as a data source\n'
+        cmd_info = cmd_info + 'Of course, in order to prevent crawlers from being banned by the website, '
+        cmd_info = cmd_info + 'we use the --wait parameter to wait for a period of time after each link is obtained '
+        cmd_info = cmd_info + 'to avoid putting too much pressure on the server.\n'
+        print(cmd_info)
+
+    def help_boolean_query(self):
+        cmd_info = 'command: \tboolean_query'.center(80, ' ')
+        cmd_info = cmd_info + '\nboolean_query [options] --hit '.center(30, " ") + '\n\n'
+        cmd_info = cmd_info + 'After creating the index table, you can use this command for boolean query.\n'
+        cmd_info = cmd_info + 'Available operations are AND, OR and NOT, '
+        cmd_info = cmd_info + 'and you can use () to combine them arbitrarily.\n'
+        cmd_info = cmd_info + 'For example, if you want to find articles '
+        cmd_info = cmd_info + 'that contain \'we\' and \'are\' but not \'you\','
+        cmd_info = cmd_info + ' please type: \n\nboolean_query we AND are NOT you --hits=7\n\n'
+        cmd_info = cmd_info + 'Later the screen will show some articles which are found.\n'
+        cmd_info = cmd_info + 'Only supports English.\n'
+        print(cmd_info)
+
+    def help_phrase_query(self):
+        cmd_info = 'command: \tphrase_query'.center(80, ' ')
+        cmd_info = cmd_info + '\nphrase_query [phrase] --hit '.center(30, " ") + '\n\n'
+        cmd_info = cmd_info + 'After creating the index table, you can use this command for phrase query.\n'
+        cmd_info = cmd_info + 'For example, If you want to find an article that contains \'how is the weather today\','
+        cmd_info = cmd_info + ' please type: \n\nphrase_query how is the weather today --hits=7\n\n'
+        cmd_info = cmd_info + 'Later the screen will show some articles ' \
+                              'with some summary information which are found.\n'
+        cmd_info = cmd_info + 'Only supports English.\n'
+        print(cmd_info)
+
+    def help_wildcard_query(self):
+        cmd_info = 'command: \twildcard_query'.center(80, ' ')
+        cmd_info = cmd_info + '\nwildcard_query [target] --hit '.center(30, " ") + '\n\n'
+        cmd_info = cmd_info + 'After creating the index table, you can use this command for wildcard query.\n'
+        cmd_info = cmd_info + 'For example, If you want to find some articles that contain words starting with\'wh\' '
+        cmd_info = cmd_info + '(like \'when\' or \'where\' or \'what\' or some words else),'
+        cmd_info = cmd_info + ' please type: \n\nwildcard_query wh* --hits=7\n\n'
+        cmd_info = cmd_info + 'Later the screen will show some articles ' \
+                              'with some summary information which are found.\n'
+        cmd_info = cmd_info + 'Only supports English.\n'
         print(cmd_info)
 
 

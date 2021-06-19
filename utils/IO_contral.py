@@ -3,6 +3,15 @@ import os
 import re
 
 
+def save_novel(cont, file):
+    try:
+        with open(file, 'w', encoding='utf8') as f:
+            f.write(cont)
+    except Exception as e:
+        print(e)
+        print(file)
+
+
 def readfiles(dir_name):
     documents = {}
     doc_lists = []
