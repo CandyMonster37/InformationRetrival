@@ -101,7 +101,7 @@ class IRcmder(cmd.Cmd):
         except Exception as e:
             print(e)
 
-    # 构建正则索引
+    # 构建轮排索引
     def do_create_Permuterm_index(self, args):
         try:
             self.object.indextable.create_Permuterm_index()
@@ -172,6 +172,7 @@ class IRcmder(cmd.Cmd):
         try:
             t1 = time.time()
             expression = args.replace('(', ' ( ').replace(')', ' ) ').split()
+            m = self.object.documents.keys()
             doc_list = sorted(self.object.documents.keys())
             ret = self.object.indextable.boolean_query(expression, doc_list)
             t2 = time.time()
@@ -198,7 +199,7 @@ class IRcmder(cmd.Cmd):
     # 短语查询
     def do_phrase_query(self, args):
         args = self.change_k(args)
-        print('\nPhrase query.Does not support summary display temporarily.')
+        print('\nPhrase query.')
         print('\n')
         try:
             t1 = time.time()
@@ -250,7 +251,7 @@ class IRcmder(cmd.Cmd):
         cmd_info = cmd_info + '如果文件集为中文文档，请输入: \n\tbuild_table ./data --language=zh\n'
         cmd_info = cmd_info + 'And if the language of the documentation set is English, '
         cmd_info = cmd_info + 'please type: \n\tbuild_table ./data --language=en\n\n'
-        cmd_info = cmd_info + 'Later an inverted index table will be built and saved to \'/tmpdata/IndexTable.pkl\''
+        cmd_info = cmd_info + 'Later an inverted index table will be built.'
         print(cmd_info)
 
     def help_show_index(self):

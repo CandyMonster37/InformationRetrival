@@ -23,10 +23,10 @@ punctuations = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+',
 
 class StaticObjects:
     def __init__(self):
-        self.documents = ''
-        self.document_words = ''
-        self.indextable = ''
-        self.doc_lists = []
+        self.documents = None
+        self.document_words = None
+        self.indextable = None
+        self.doc_lists = None
 
 
 class CompressTable:
@@ -188,7 +188,7 @@ class IndexTable:
                 print_vb_code(self.table.compress_doc_id[i])
         print('\n')
 
-    # 创建倒排表
+    # 创建轮排表
     def create_Permuterm_index(self):
         print('Begin creating Permuterm index.')
         self.permuterm_index_table = sbst()
@@ -269,7 +269,7 @@ class IndexTable:
                     stack = boolean_op(op.pop(), stack)
                 op.pop()
             else:
-                # 列表的最后一项一定是空串''，标识结束
+                # 普通单词送stack
                 vec = vector_encode(self.table.get(words[i], [{}, 0])[0], doc_list)
                 stack.append(vec)
 
