@@ -97,7 +97,7 @@ class Spider:
                 if len(self.novel_url_dic) >= self.limit:
                     break
             if wait:
-                time.sleep(0.5)
+                time.sleep(wait)
 
     def get_chapter(self, wait=None):
         for item in self.novel_url_dic.keys():
@@ -144,7 +144,7 @@ class Spider:
                 save_novel(cont=essay, file=tar_file)
                 self.nums += 1
                 if wait:
-                    time.sleep(0.5)
+                    time.sleep(wait)
         self.t_end = time.time()
         print('\n'*80)
         print('Successfully get {0} essays!(in {1:.5f} seconds)\n'.format(self.nums, self.t_end - self.t_start))

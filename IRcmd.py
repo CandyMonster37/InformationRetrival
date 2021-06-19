@@ -224,8 +224,6 @@ class IRcmder(cmd.Cmd):
         except Exception as e:
             print(e)
 
-    # lll
-
     def do_exit(self, args):
         try:
             print('\nThank you for using. Goodbye.\n')
